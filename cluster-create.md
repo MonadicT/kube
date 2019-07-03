@@ -15,7 +15,6 @@
 4.  [Deploy Wordpress and MySql](#org793b618)
 5.  [Closing Remarks](#org587f264)
 
-    head -n 5 blurb.txt
 
 
 <a id="org93fc546"></a>
