@@ -1,0 +1,18 @@
+# kubectl apply -f pv.yml
+# Should create a PV
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-cp-test-pv
+  labels:
+    app: testing
+spec:
+  capacity:
+    storage: 1Mi
+  accessModes:
+  - ReadWriteOnce
+  nfs:
+    path: /nfs/pod1
+    server: 10.0.0.8
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs

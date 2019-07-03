@@ -1,0 +1,12 @@
+---
+- hosts: all
+  tasks:
+  - name: Reset k8s state
+    command: kubeadm reset --force
+    ignore_errors: true
+    become: true
+
+  - name: Ensure directories are gone
+    file:
+      path: /var/lib/etcd
+    state: absent

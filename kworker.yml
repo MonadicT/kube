@@ -1,0 +1,77 @@
+---
+- hosts: workers
+  vars:
+    - master_ip_nw: '192.168.1.0/24'
+  tasks:
+    - name: Pick IP from the same network as master
+      set_fact: hostip="{{ ansible_all_ipv4_addresses|ipaddr(master_ip_nw) }}"
+
+    - name: Ensure Kubernetes APT key is present
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+      become: true
+
+    - name: Ensure Kubernetes APT Repo is present
+      apt_repository:
+        repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+      become: true
+
+    - name: Ensure Docker APT key is present
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      become: true
+
+    - name: Ensure Docker APT Repo is present
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+        state: present
+      become: true
+
+    - name: Update cache
+      apt:
+        update_cache: true
+        upgrade: true
+      become: true
+
+    - name: Install runtime
+      apt:
+        name: docker-ce
+      become: true
+
+    - name: Install kubelet kubeadm kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+      become: true
+
+    - name: Send bridge packets to iptables for processing
+      block:
+      - lineinfile:
+          path: /etc/sysctl.conf
+          line: net.bridge.bridge-nf-call-iptables=1
+          create: yes
+      - lineinfile:
+          path: /etc/sysctl.conf
+          line: net.bridge.bridge-nf-call-ip6tables=1
+          create: yes
+      - command: sysctl net.bridge.bridge-nf-call-iptables=1
+      - command: sysctl net.bridge.bridge-nf-call-ip6tables=1
+      become: true
+
+    - name: Create /etc/default/kubelet with extra args
+      template:
+        src: kubelet.j2
+        dest: /etc/default/kubelet
+      become: true
+
+    - name: Install NFS client
+      apt:
+        name: nfs-common
+        state: present
+      become: true

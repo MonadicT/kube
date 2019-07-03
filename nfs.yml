@@ -1,0 +1,33 @@
+---
+- hosts: nfs
+  tasks:
+  - name: Install NFS server
+    apt:
+      name:
+        - nfs-kernel-server
+        - nfs-common
+      update-cache: true
+    become: true
+
+  - name: Ensure /nfs is present
+    file:
+      path: /nfs
+      mode: 0755
+      owner: nobody
+      group: nogroup
+      state: directory
+    become: true
+
+  - name: Create /etc/exports
+    copy:
+      content: '/nfs            192.168.1.1/24(rw,sync,no_root_squash,no_subtree_check)'
+      dest: /etc/exports
+      owner: root
+      group: root
+    become: true
+
+  - name: Restart nfs server
+    service:
+      name: nfs-kernel-server
+      state: restarted
+    become: true

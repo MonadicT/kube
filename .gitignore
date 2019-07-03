@@ -1,0 +1,20 @@
+# Ignore .log files
+*.log
+*~
+
+
+
+# Ignore Vagrant runtime data
+.vagrant
+
+# Ignore credential file
+admin.conf
+
+# Ignore generated files
+ssh_config
+hosts
+Vagrantfile
+deploy-nfs-cp.yml
+
+# Ignore Ansible's .retry files
+*.retry

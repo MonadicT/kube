@@ -1,0 +1,99 @@
+---
+- hosts: masters
+  vars:
+    - master_ip_nw: '192.168.1.0/24'
+  tasks:
+    - name: Ensure Kubernetes APT key is present
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+      become: true
+
+    - name: Ensure Kubernetes APT Repo is present
+      apt_repository:
+        repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+      become: true
+
+    - name: Ensure Docker APT key is present
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      become: true
+
+    - name: Ensure Docker APT Repo is present
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+        state: present
+      become: true
+
+    - name: Update cache
+      apt:
+        update_cache: true
+        upgrade: true
+      become: true
+
+    - name: Install container runtime
+      apt:
+        name: docker-ce
+      become: true
+
+    - name: Install kubelet kubeadm kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+      become: true
+
+    - name: Pick IP from the same network as master
+      set_fact: hostip="{{ ansible_all_ipv4_addresses|ipaddr(master_ip_nw) }}"
+
+    - name: Send bridge packets to iptables for processing
+      block:
+      - lineinfile:
+          path: /etc/sysctl.conf
+          line: net.bridge.bridge-nf-call-iptables=1
+          create: yes
+      - lineinfile:
+          path: /etc/sysctl.conf
+          line: net.bridge.bridge-nf-call-ip6tables=1
+          create: yes
+      - command: sysctl net.bridge.bridge-nf-call-iptables=1
+      - command: sysctl net.bridge.bridge-nf-call-ip6tables=1
+      become: true
+
+    - name: Check cluster state
+      command: kubeadm token list
+      register: inited
+      ignore_errors: true
+      become: true
+
+    - name : Ensure no stale data is present
+      block:
+      - file: path=/var/lib/etcd state=absent
+      - file: path=/var/lib/etcd state=directory
+      when: inited.rc > 0
+      become: true
+
+    - name: Create /etc/default/kubelet with extra args
+      template:
+        src: kubelet.j2
+        dest: /etc/default/kubelet
+      become: true
+
+    - name: Initialize cluster
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16 --apiserver-advertise-address "{{ hostip[0] }}"
+      when: inited.rc > 0
+      become: true
+
+    - name: Copy admin conf
+      block:
+        - copy:
+            src: /etc/kubernetes/admin.conf
+            remote_src: true
+            dest: "{{ ansible_env.HOME }}"
+            owner: "{{ ansible_env.USER }}"
+            group: "{{ ansible_env.USER }}"
+      become: true
