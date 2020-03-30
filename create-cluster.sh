@@ -86,11 +86,14 @@ EOF
 create_nfs_client_provisioner_deploy() {
     cat > deploy-nfs-cp.yml <<EOF
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: nfs-client-provisioner
 spec:
   replicas: 1
+  selector:
+      matchLabels:
+            app: nfs-client-provisioner
   strategy:
     type: Recreate
   template:
@@ -145,7 +148,7 @@ configure_workers() {
     ansible-playbook kworker.yml
 
     # Join all workers to cluster
-    JOIN_CMD=$(ansible masters -m shell -b -a "kubeadm token create --print-join-command"|awk '{sub(/.*>>/, "");print}')
+    JOIN_CMD=$(ansible masters -m shell -b -a "kubeadm token create --print-join-command 2>/dev/null"|awk '{sub(/.*>>/, "");print}')
     ansible workers -m shell -b -a "$JOIN_CMD"
 }
 
