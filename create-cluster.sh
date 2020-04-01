@@ -51,6 +51,21 @@ Vagrant.configure("2") do |config|
     subconfig.vm.network :public_network, ip: "$MASTER_IP", bridge: "$BRIDGE_IF"
   end
 
+  # default router
+  config.vm.provision "shell",
+    run: "always",
+    inline: "route add default gw $BRIDGE_IF"
+
+  # default router ipv6
+  config.vm.provision "shell",
+    run: "always",
+    inline: "route -A inet6 add default gw fc00::1 eth1"
+
+  # delete default gw added by vagrant on 10.0.2.2
+  config.vm.provision "shell",
+    run: "always",
+    inline: "route del default gw 10.0.2.2"
+
   config.vm.provision "shell", inline: <<-SHELL
     apt-get update
     apt-get install -y python
